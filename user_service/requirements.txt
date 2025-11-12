@@ -1,0 +1,5 @@
+fastapi[standard]
+pika
+pyjwt
+pwdlib[argon2]
+psycopg2
