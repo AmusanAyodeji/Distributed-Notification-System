@@ -95,6 +95,7 @@ def change_notification_preference(preference: UserPreference, current_user: Ann
 
     conn, cur = init_db_connection()
     cur.execute("UPDATE users SET pref_email = %s AND pref_push = %s WHERE email = %s",(preference.email, preference.push, current_user.email))
+    conn.commit()
     cur.close()
     conn.close()
     response = {
