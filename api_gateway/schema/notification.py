@@ -21,7 +21,7 @@ class NotificationStatus(str, Enum):
 
 class NotificationRequest(BaseModel):
     notification_type: NotificationType
-    user_id: uuid.UUID
+    user_id: uuid.UUID | str
     template_code: str | path
     variables: UserData
     request_id: str

@@ -1,9 +1,36 @@
+import uuid
 from fastapi import APIRouter, Depends
-from schema.user import UserCreate, UserOut as User, UserPreference
+from schema.user import UserCreate, UserOut as User, UserPreference, NotificationRequest
 from services.auth import get_password_hash, init_db_connection, get_current_user
 from typing import Annotated
+import httpx
+import os
+import psycopg2
+from dotenv import load_dotenv
+
+load_dotenv()
 
 router = APIRouter()
+
+USER = os.getenv("USER")
+PASSWORD = os.getenv("PASSWORD")
+HOST = os.getenv("HOST")
+PORT = os.getenv("PORT")
+DBNAME = os.getenv("DBNAME")
+
+def init_db_connection():
+    try:
+        connection = psycopg2.connect(
+            user=USER,
+            password=PASSWORD,
+            host=HOST,
+            port=PORT,
+            dbname=DBNAME
+        )
+        cursor = connection.cursor()
+        return connection, cursor
+    except Exception as e:
+        print(f"Failed to connect: {e}")
 
 @router.post("/api/v1/users/")
 def create_user(user_data:UserCreate):
@@ -76,7 +103,7 @@ def change_notification_preference(preference: UserPreference, current_user: Ann
         return response
 
     conn, cur = init_db_connection()
-    cur.execute("UPDATE users SET pref_email = %s AND pref_push = %s WHERE email = %s",(preference.email, preference.push, current_user.email))
+    cur.execute("UPDATE users SET pref_email = %s, pref_push = %s WHERE email = %s",(preference.email, preference.push, current_user.email))
     conn.commit()
     cur.close()
     conn.close()
@@ -88,3 +115,34 @@ def change_notification_preference(preference: UserPreference, current_user: Ann
     }
     return response
 
+@router.get("/api/v1/users/notification")
+def send_notification(current_user: Annotated[User, Depends(get_current_user)], template_code: str,link: str = None, ):
+    # try:
+        conn, cur = init_db_connection()
+        cur.execute("SELECT id FROM users WHERE email = %s",(current_user.email,))
+        user = cur.fetchone()
+        response = httpx.post("http://127.0.0.1:8002/api/v1/notifications/", json=
+            NotificationRequest(
+                notification_type="email" if current_user.preferences.email else "push",
+                user_id=str(user[0]),
+                template_code=template_code,
+                variables={
+                    "name": current_user.name,
+                    "link": link if link else "https://example.com/welcome",
+                    "meta": {}
+                },
+                request_id=str(uuid.uuid4()),
+                priority=1,
+                metadata={}
+            ).model_dump()
+        )
+        resp = {
+        "success": True,
+        "message": "Notification Sent",
+        "data": response.json(),
+        "meta": {}
+        }
+        return resp
+    # except Exception as e:
+    #     print(f"Error sending notification: {e}")
+     

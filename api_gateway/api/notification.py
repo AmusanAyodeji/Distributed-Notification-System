@@ -1,15 +1,13 @@
 from fastapi import APIRouter, Header
 from schema.notification import NotificationRequest
 from services.queue import send_to_queue 
-from auth import verify_api_key
 
 router = APIRouter()
 
 notifstatus = {}
 
 @router.post("/api/v1/notifications/")
-def create_notification(notifrequest: NotificationRequest, api_key: str = Header(...)):
-    verify_api_key(api_key)
+def create_notification(notifrequest: NotificationRequest):
     queue_name = "email.queue" if notifrequest.notification_type == "email" else "push.queue"
     send_to_queue(queue_name, notifrequest.model_dump())
     notifstatus[notifrequest.request_id] = "pending"
