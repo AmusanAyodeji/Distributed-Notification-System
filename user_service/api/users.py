@@ -50,29 +50,11 @@ def create_user(user_data:UserCreate):
     }
     return response
 
+#do not include push token in things for user to input, it will be automatically gotten from their devices and saved to db
+
 @router.get("/api/v1/users/me")
 def get_user_info(current_user: Annotated[User, Depends(get_current_user)]):
     return current_user
-
-@router.patch("/api/v1/users/{push_token}")
-def change_push_token(push_token: str, current_user: Annotated[User, Depends(get_current_user)]):
-    conn, cur = init_db_connection()
-    cur.execute("UPDATE users SET push_token = %s WHERE email = %s",(push_token, current_user.email))
-    conn.commit()
-    cur.close()
-    conn.close()
-    response = {
-        "success": True,
-        "message": "Push Token Updated",
-        "data": User(
-            name=current_user.name,
-            email=current_user.email,
-            push_token=push_token,
-            preferences=current_user.preferences
-        ),
-        "meta": {}
-    }
-    return response
 
 @router.patch("/api/v1/users/update/{user_preference}")
 def change_notification_preference(preference: UserPreference, current_user: Annotated[User, Depends(get_current_user)]):
